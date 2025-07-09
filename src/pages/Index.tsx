@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "react";\nimport * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,8 @@ const Index = () => {
     active: true,
   });
   const [showAddCamera, setShowAddCamera] = useState(false);
+  const [showAddPlate, setShowAddPlate] = useState(false);
+  const [editingPlate, setEditingPlate] = useState<any>(null);
   const [newCamera, setNewCamera] = useState<Partial<Camera>>({
     name: "",
     ip: "",
@@ -90,9 +92,23 @@ const Index = () => {
     protocol: "ONVIF",
     location: "",
   });
+  const [newPlate, setNewPlate] = useState({
+    plate: "",
+    owner: "",
+    expires: "",
+  });
+  const [cameras, setCameras] = useState<Camera[]>([]);
+  const [database, setDatabase] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([]);
+  const [isTestingCamera, setIsTestingCamera] = useState<number | null>(null);
+  const [eventFilter, setEventFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
 
   // Моковые данные для демонстрации
-  const mockEvents = [
+  // Инициализация данных
+  React.useEffect(() => {
+    const mockEvents = [
     {
       id: 1,
       plate: "А123БВ199",
@@ -146,6 +162,12 @@ const Index = () => {
       expires: "2024-06-30",
     },
   ];
+
+    setEvents(mockEvents);
+    setDatabase(mockDatabase);
+    setCameras(mockCameras);
+    setPendingEvents(mockPendingEvents);
+  }, []);
 
   const mockCameras: Camera[] = [
     {
@@ -269,7 +291,18 @@ const Index = () => {
       newCamera.username &&
       newCamera.password
     ) {
-      console.log("Adding camera:", newCamera);
+      const camera: Camera = {
+        id: Date.now(),
+        name: newCamera.name,
+        ip: newCamera.ip,
+        port: newCamera.port || 554,
+        username: newCamera.username,
+        password: newCamera.password,
+        protocol: newCamera.protocol || 'ONVIF',
+        status: 'offline',
+        location: newCamera.location || ''
+      };
+      setCameras([...cameras, camera]);
       setShowAddCamera(false);
       setNewCamera({
         name: "",
@@ -284,13 +317,103 @@ const Index = () => {
   };
 
   const handleConfirmEvent = (eventId: number, confirmed: boolean) => {
-    console.log(`Event ${eventId} ${confirmed ? "confirmed" : "rejected"}`);
+    setPendingEvents(pendingEvents.filter(e => e.id !== eventId));
+    
+    const event = pendingEvents.find(e => e.id === eventId);
+    if (event) {
+      const newEvent = {
+        id: Date.now(),
+        plate: event.plate,
+        time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+        status: confirmed ? 'allowed' : 'denied',
+        camera: event.camera,
+        timestamp: new Date().toISOString()
+      };
+      setEvents([newEvent, ...events]);
+    }
+  };
+
+  const handleDeleteCamera = (cameraId: number) => {
+    setCameras(cameras.filter(cam => cam.id !== cameraId));
+  };
+
+  const handleTestCamera = async (cameraId: number) => {
+    setIsTestingCamera(cameraId);
+    setTimeout(() => {
+      setCameras(cameras.map(cam => 
+        cam.id === cameraId 
+          ? { ...cam, status: Math.random() > 0.3 ? 'online' : 'error' }
+          : cam
+      ));
+      setIsTestingCamera(null);
+    }, 2000);
+  };
+
+  const handleAddPlate = () => {
+    if (newPlate.plate && newPlate.owner && newPlate.expires) {
+      const plate = {
+        id: Date.now(),
+        plate: newPlate.plate,
+        owner: newPlate.owner,
+        status: 'active',
+        expires: newPlate.expires
+      };
+      setDatabase([...database, plate]);
+      setShowAddPlate(false);
+      setNewPlate({ plate: '', owner: '', expires: '' });
+    }
+  };
+
+  const handleEditPlate = (plate: any) => {
+    setEditingPlate(plate);
+    setNewPlate({
+      plate: plate.plate,
+      owner: plate.owner,
+      expires: plate.expires
+    });
+    setShowAddPlate(true);
+  };
+
+  const handleUpdatePlate = () => {
+    if (editingPlate && newPlate.plate && newPlate.owner && newPlate.expires) {
+      setDatabase(database.map(p => 
+        p.id === editingPlate.id 
+          ? { ...p, plate: newPlate.plate, owner: newPlate.owner, expires: newPlate.expires }
+          : p
+      ));
+      setShowAddPlate(false);
+      setEditingPlate(null);
+      setNewPlate({ plate: '', owner: '', expires: '' });
+    }
+  };
+
+  const handleDeletePlate = (plateId: number) => {
+    setDatabase(database.filter(p => p.id !== plateId));
   };
 
   const canAccess = (requiredRole: UserRole) => {
     const roleHierarchy = { admin: 3, operator: 2, user: 1 };
     return roleHierarchy[currentUser.role] >= roleHierarchy[requiredRole];
   };
+
+  const filteredEvents = events.filter(event => {
+    const matchesSearch = event.plate.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         event.camera.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = eventFilter === 'all' || event.status === eventFilter;
+    const matchesDate = !dateFilter || event.timestamp?.startsWith(dateFilter);
+    return matchesSearch && matchesFilter && matchesDate;
+  });
+
+  const filteredDatabase = database.filter(record => 
+    record.plate.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    record.owner.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredCameras = cameras.filter(camera => 
+    camera.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    camera.ip.includes(searchQuery) ||
+    camera.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -448,7 +571,7 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {mockEvents.slice(0, 6).map((event) => (
+                    {events.slice(0, 6).map((event) => (
                       <div
                         key={event.id}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -486,7 +609,54 @@ const Index = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="max-w-sm"
                   />
-                  <Button>Добавить номер</Button>
+                  <Dialog open={showAddPlate} onOpenChange={setShowAddPlate}>
+                    <DialogTrigger asChild>
+                      <Button>Добавить номер</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>{editingPlate ? 'Редактировать номер' : 'Добавить номер'}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Номер ТС</Label>
+                          <Input
+                            value={newPlate.plate}
+                            onChange={(e) => setNewPlate({...newPlate, plate: e.target.value})}
+                            placeholder="А123БВ199"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Владелец</Label>
+                          <Input
+                            value={newPlate.owner}
+                            onChange={(e) => setNewPlate({...newPlate, owner: e.target.value})}
+                            placeholder="Иванов И.И."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Действует до</Label>
+                          <Input
+                            type="date"
+                            value={newPlate.expires}
+                            onChange={(e) => setNewPlate({...newPlate, expires: e.target.value})}
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => {
+                            setShowAddPlate(false);
+                            setEditingPlate(null);
+                            setNewPlate({ plate: '', owner: '', expires: '' });
+                          }}>
+                            Отмена
+                          </Button>
+                          <Button onClick={editingPlate ? handleUpdatePlate : handleAddPlate}>
+                            {editingPlate ? 'Сохранить' : 'Добавить'}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
@@ -501,7 +671,7 @@ const Index = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockDatabase.map((record) => (
+                    {filteredDatabase.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell className="font-mono">
                           {record.plate}
@@ -521,10 +691,10 @@ const Index = () => {
                         <TableCell>{record.expires}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" onClick={() => handleEditPlate(record)}>
                               Изменить
                             </Button>
-                            <Button variant="destructive" size="sm">
+                            <Button variant="destructive" size="sm" onClick={() => handleDeletePlate(record.id)}>
                               Удалить
                             </Button>
                           </div>
@@ -544,6 +714,31 @@ const Index = () => {
                   <Icon name="FileText" className="h-5 w-5" />
                   Журнал событий
                 </CardTitle>
+                <div className="flex gap-2 mt-4">
+                  <Input
+                    placeholder="Поиск по номеру или камере..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-sm"
+                  />
+                  <Select value={eventFilter} onValueChange={setEventFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Все события</SelectItem>
+                      <SelectItem value="allowed">Разрешено</SelectItem>
+                      <SelectItem value="denied">Запрещено</SelectItem>
+                      <SelectItem value="unknown">Неизвестно</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="w-40"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -556,7 +751,7 @@ const Index = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockEvents.map((event) => (
+                    {filteredEvents.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell>{event.time}</TableCell>
                         <TableCell className="font-mono">
@@ -589,24 +784,14 @@ const Index = () => {
                   <div>
                     <h3 className="font-semibold mb-3">Камеры</h3>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span>Камера 1 (Вход)</span>
-                        <Badge className="bg-green-100 text-green-800">
-                          Онлайн
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span>Камера 2 (Выход)</span>
-                        <Badge className="bg-green-100 text-green-800">
-                          Онлайн
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span>Камера 3 (Парковка)</span>
-                        <Badge className="bg-red-100 text-red-800">
-                          Офлайн
-                        </Badge>
-                      </div>
+                      {cameras.slice(0, 3).map((camera) => (
+                        <div key={camera.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <span>{camera.name}</span>
+                          <Badge className={getCameraStatusColor(camera.status)}>
+                            {camera.status === 'online' ? 'Онлайн' : camera.status === 'offline' ? 'Оффлайн' : 'Ошибка'}
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -861,7 +1046,7 @@ const Index = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockCameras.map((camera) => (
+                      {filteredCameras.map((camera) => (
                         <TableRow key={camera.id}>
                           <TableCell>
                             <div>
@@ -889,11 +1074,17 @@ const Index = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
-                                <Icon name="Settings" className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                <Icon name="Play" className="h-4 w-4" />
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleTestCamera(camera.id)}
+                                disabled={isTestingCamera === camera.id}
+                              >
+                                {isTestingCamera === camera.id ? (
+                                  <Icon name="Loader2" className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Icon name="Play" className="h-4 w-4" />
+                                )}
                               </Button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -915,7 +1106,7 @@ const Index = () => {
                                     <AlertDialogCancel>
                                       Отмена
                                     </AlertDialogCancel>
-                                    <AlertDialogAction>
+                                    <AlertDialogAction onClick={() => handleDeleteCamera(camera.id)}>
                                       Удалить
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
