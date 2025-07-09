@@ -825,6 +825,66 @@ const Index = () => {
             </Card>
           </TabsContent>
 
+          {canAccess("operator") && (
+            <TabsContent value="operator" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="UserCheck" className="h-5 w-5" />
+                    Панель оператора КПП
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {pendingEvents.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Нет событий, требующих подтверждения
+                      </div>
+                    ) : (
+                      pendingEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="font-mono text-lg font-bold">
+                              {event.plate}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {event.camera} • {event.time}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleConfirmEvent(event.id, true)}
+                              className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                            >
+                              <Icon name="Check" className="h-4 w-4 mr-1" />
+                              Подтвердить
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleConfirmEvent(event.id, false)
+                              }
+                              className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                            >
+                              <Icon name="X" className="h-4 w-4 mr-1" />
+                              Отклонить
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
