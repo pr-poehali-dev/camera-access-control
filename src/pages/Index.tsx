@@ -150,55 +150,55 @@ const Index = () => {
   const mockCameras: Camera[] = [
     {
       id: 1,
-      name: \"Камера 1 - Вход\",
-      ip: \"192.168.1.101\",
+      name: "Камера 1 - Вход",
+      ip: "192.168.1.101",
       port: 554,
-      username: \"admin\",
-      password: \"password123\",
-      protocol: \"ONVIF\",
-      status: \"online\",
-      location: \"Главный вход\"
+      username: "admin",
+      password: "password123",
+      protocol: "ONVIF",
+      status: "online",
+      location: "Главный вход"
     },
     {
       id: 2,
-      name: \"Камера 2 - Выход\",
-      ip: \"192.168.1.102\",
+      name: "Камера 2 - Выход",
+      ip: "192.168.1.102",
       port: 554,
-      username: \"admin\",
-      password: \"password123\",
-      protocol: \"ONVIF\",
-      status: \"online\",
-      location: \"Главный выход\"
+      username: "admin",
+      password: "password123",
+      protocol: "ONVIF",
+      status: "online",
+      location: "Главный выход"
     },
     {
       id: 3,
-      name: \"Камера 3 - Парковка\",
-      ip: \"192.168.1.103\",
+      name: "Камера 3 - Парковка",
+      ip: "192.168.1.103",
       port: 554,
-      username: \"admin\",
-      password: \"password123\",
-      protocol: \"ONVIF\",
-      status: \"error\",
-      location: \"Парковка\"
+      username: "admin",
+      password: "password123",
+      protocol: "ONVIF",
+      status: "error",
+      location: "Парковка"
     }
   ]
 
   const mockPendingEvents: PendingEvent[] = [
     {
       id: 1,
-      plate: \"К789МН199\",
-      timestamp: \"2024-07-09 15:32:45\",
-      camera: \"Камера 1\",
+      plate: "К789МН199",
+      timestamp: "2024-07-09 15:32:45",
+      camera: "Камера 1",
       confidence: 95,
-      status: \"pending\"
+      status: "pending"
     },
     {
       id: 2,
-      plate: \"Т456УЦ777\",
-      timestamp: \"2024-07-09 15:28:12\",
-      camera: \"Камера 2\",
+      plate: "Т456УЦ777",
+      timestamp: "2024-07-09 15:28:12",
+      camera: "Камера 2",
       confidence: 87,
-      status: \"pending\"
+      status: "pending"
     }
   ]
 
