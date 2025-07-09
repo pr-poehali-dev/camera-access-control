@@ -105,6 +105,18 @@ const Index = () => {
   const [isTestingCamera, setIsTestingCamera] = useState<number | null>(null);
   const [eventFilter, setEventFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [currentTime, setCurrentTime] = useState(
+    new Date().toLocaleTimeString("ru-RU"),
+  );
+  const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
+
+  // Обновляем время каждую секунду
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString("ru-RU"));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Моковые данные для демонстрации
   // Инициализация данных
@@ -557,22 +569,67 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center">
-                      <img
-                        src="/img/94c64a41-1ac2-46df-9b32-cf6aaa7474f8.jpg"
-                        alt="Камера 1"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    </div>
-                    <div className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center">
-                      <div className="text-white text-sm">Камера 2</div>
-                    </div>
-                    <div className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center">
-                      <div className="text-white text-sm">Камера 3</div>
-                    </div>
-                    <div className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center">
-                      <div className="text-white text-sm">Камера 4</div>
-                    </div>
+                    {cameras.slice(0, 4).map((camera, index) => (
+                      <div
+                        key={camera.id}
+                        className="relative bg-gray-800 rounded-lg aspect-video overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setSelectedCamera(camera)}
+                      >
+                        {camera.status === "online" ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={
+                                index === 0
+                                  ? "/img/94c64a41-1ac2-46df-9b32-cf6aaa7474f8.jpg"
+                                  : `https://picsum.photos/640/360?random=${camera.id}`
+                              }
+                              alt={camera.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                              {camera.name}
+                            </div>
+                            <div className="absolute top-2 right-2 flex items-center gap-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-white text-xs">LIVE</span>
+                            </div>
+                            <div className="absolute bottom-2 left-2 text-white text-xs bg-black bg-opacity-70 px-2 py-1 rounded">
+                              {currentTime}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-white">
+                            <Icon
+                              name="CameraOff"
+                              className="h-8 w-8 mb-2 text-gray-400"
+                            />
+                            <div className="text-sm font-medium">
+                              {camera.name}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {camera.status === "offline"
+                                ? "Камера оффлайн"
+                                : "Ошибка подключения"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Добавляем пустые слоты если камер меньше 4 */}
+                    {Array.from({
+                      length: Math.max(0, 4 - cameras.length),
+                    }).map((_, index) => (
+                      <div
+                        key={`empty-${index}`}
+                        className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center"
+                      >
+                        <div className="text-center text-gray-400">
+                          <Icon name="Plus" className="h-8 w-8 mx-auto mb-2" />
+                          <div className="text-sm">Добавить камеру</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -1254,6 +1311,65 @@ const Index = () => {
           )}
         </Tabs>
       </div>
+
+      {/* Полноэкранный просмотр камеры */}
+      {selectedCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+          <div className="relative max-w-6xl max-h-[90vh] w-full mx-4">
+            <button
+              onClick={() => setSelectedCamera(null)}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-70 text-white p-2 rounded-full hover:bg-opacity-100 transition-all"
+            >
+              <Icon name="X" className="h-6 w-6" />
+            </button>
+
+            {selectedCamera.status === "online" ? (
+              <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+                <img
+                  src={
+                    selectedCamera.id === cameras[0]?.id
+                      ? "/img/94c64a41-1ac2-46df-9b32-cf6aaa7474f8.jpg"
+                      : `https://picsum.photos/1280/720?random=${selectedCamera.id}`
+                  }
+                  alt={selectedCamera.name}
+                  className="w-full h-auto max-h-[80vh] object-contain"
+                />
+                <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white px-4 py-2 rounded">
+                  <div className="font-medium">{selectedCamera.name}</div>
+                  <div className="text-sm text-gray-300">
+                    {selectedCamera.location}
+                  </div>
+                </div>
+                <div className="absolute top-4 right-16 flex items-center gap-2 bg-black bg-opacity-70 text-white px-4 py-2 rounded">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">LIVE</span>
+                </div>
+                <div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white px-4 py-2 rounded">
+                  <div className="text-sm">{currentTime}</div>
+                  <div className="text-xs text-gray-300">
+                    IP: {selectedCamera.ip}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-900 rounded-lg p-12 text-center">
+                <Icon
+                  name="CameraOff"
+                  className="h-16 w-16 mx-auto mb-4 text-gray-400"
+                />
+                <h3 className="text-white text-xl font-medium mb-2">
+                  {selectedCamera.name}
+                </h3>
+                <p className="text-gray-400">
+                  {selectedCamera.status === "offline"
+                    ? "Камера оффлайн"
+                    : "Ошибка подключения"}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
